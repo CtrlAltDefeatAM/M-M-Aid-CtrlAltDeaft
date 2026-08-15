@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MMAid Web — client-side Mutants & Masterminds character import and review." />
+  <title>MMAid Web</title>
+  <style>
+:root {
+  color-scheme: dark;
+  --bg: #0c1014;
+  --panel: #141a20;
+  --panel-2: #1a222a;
+  --line: #2f3b46;
+  --text: #f3f5f7;
+  --muted: #aab5bf;
+  --accent: #78b88d;
+  --accent-2: #c69b7b;
+  --danger: #e08383;
+  --warn: #e0bd70;
+  --unknown: #8aa9df;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+a { color: inherit; }
+
+.site-header {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px clamp(18px, 4vw, 56px);
+  background: rgba(10, 14, 18, .94);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(12px);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand h1 { margin: 0; font-size: 18px; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.brand-mark {
+  width: 42px; height: 42px; display: grid; place-items: center;
+  border: 1px solid var(--accent); border-radius: 10px; font-weight: 800;
+}
+.top-nav { display: flex; gap: 18px; font-size: 14px; }
+.top-nav a { color: var(--muted); text-decoration: none; }
+.top-nav a:hover { color: var(--text); }
+
+main { width: min(1120px, calc(100% - 32px)); margin: 28px auto 60px; }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: clamp(22px, 4vw, 42px);
+  margin-bottom: 24px;
+}
+.hero { display: grid; grid-template-columns: 1.4fr .8fr; gap: 28px; }
+.hero h2 { font-size: clamp(32px, 5vw, 58px); line-height: 1.02; max-width: 760px; margin: 10px 0 18px; }
+.lead { color: var(--muted); font-size: 18px; line-height: 1.6; max-width: 760px; }
+.eyebrow { color: var(--accent); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; }
+.hero-card, .mini-card, .finding, .notice {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  border-radius: 14px;
+  padding: 18px;
+}
+.hero-card ul { padding-left: 20px; }
+.muted { color: var(--muted); }
+
+.button {
+  appearance: none; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 15px; color: var(--text); background: var(--panel-2);
+  font: inherit; cursor: pointer; text-decoration: none; display: inline-block;
+}
+.button.primary { background: var(--accent); color: #08120c; border-color: var(--accent); font-weight: 800; }
+.button.secondary { border-color: var(--accent); }
+.button.ghost { background: transparent; }
+
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.section-heading h2, .section-heading h3 { margin: 4px 0 0; }
+
+.drop-zone {
+  min-height: 230px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 9px; border: 2px dashed #4c5d69; border-radius: 16px;
+  background: #0f1419; cursor: pointer; transition: .18s ease;
+}
+.drop-zone.dragging, .drop-zone:hover { border-color: var(--accent); background: #101a15; }
+.drop-zone input { display: none; }
+.drop-icon { font-size: 38px; color: var(--accent); }
+.drop-zone small { color: var(--muted); }
+
+.status { margin-top: 18px; border-radius: 10px; padding: 12px 14px; border: 1px solid var(--line); }
+.status.error { border-color: var(--danger); color: #ffd2d2; }
+.status.ok { border-color: var(--accent); }
+
+.result-section { margin-top: 28px; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.summary-item { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #10161b; }
+.summary-item .label { color: var(--muted); font-size: 12px; }
+.summary-item .value { margin-top: 5px; font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
+.badge { padding: 7px 10px; border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; font-size: 12px; font-weight: 700; }
+
+.notice { margin-bottom: 14px; color: var(--muted); line-height: 1.5; }
+.findings-list { display: grid; gap: 12px; }
+.finding { border-left-width: 4px; }
+.finding.pass { border-left-color: var(--accent); }
+.finding.review { border-left-color: var(--warn); }
+.finding.correction { border-left-color: var(--danger); }
+.finding.unknown { border-left-color: var(--unknown); }
+.finding h4 { margin: 0 0 7px; }
+.finding p { color: var(--muted); margin: 6px 0; line-height: 1.5; }
+.finding code { color: var(--text); }
+
+.rule-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.mini-card h3 { margin-top: 0; }
+
+footer { color: var(--muted); text-align: center; padding: 20px; }
+
+@media (max-width: 800px) {
+  .hero { grid-template-columns: 1fr; }
+  .top-nav { display: none; }
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rule-links { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .summary-grid { grid-template-columns: 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark">M&M</div>
+      <div>
+        <h1>MMAid Web</h1>
+        <p>Character Import & Review</p>
+      </div>
+    </div>
+    <nav class="top-nav" aria-label="Primary navigation">
+      <a href="#home">Home</a>
+      <a href="#review">Review</a>
+      <a href="#rules">Rules</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="home" class="hero panel">
+      <div>
+        <span class="eyebrow">Mutants & Masterminds 3E</span>
+        <h2>Check a character without rebuilding it by hand.</h2>
+        <p class="lead">
+          Upload a supported character file. MMAid Web reads it locally in your browser,
+          shows what it can identify, and prepares the character for MMAid review.
+        </p>
+        <a class="button primary" href="#review">Upload a Character</a>
+      </div>
+      <div class="hero-card">
+        <strong>Current starter support</strong>
+        <ul>
+          <li>Mastermind Maker <code>.mm3</code></li>
+          <li>Foundry Actor <code>.json</code></li>
+          <li>Hero Lab <code>.xml</code> preview</li>
+          <li>Generic JSON / text detection</li>
+        </ul>
+        <p class="muted">Character files are parsed in the browser. This starter does not upload them to a server.</p>
+      </div>
+    </section>
+
+    <section id="review" class="panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Character Review</span>
+          <h2>Upload Character</h2>
+        </div>
+        <button id="clearButton" class="button ghost" type="button">Clear</button>
+      </div>
+
+      <label id="dropZone" class="drop-zone" for="fileInput" tabindex="0">
+        <input id="fileInput" type="file" accept=".mm3,.json,.xml,.html,.htm,.txt" />
+        <span class="drop-icon">⇧</span>
+        <strong>Drop your character here</strong>
+        <span>or click to choose a file</span>
+        <small>.mm3 · .json · .xml · .html · .txt</small>
+      </label>
+
+      <div id="status" class="status" hidden></div>
+
+      <section id="importSummary" class="result-section" hidden>
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Detected Character</span>
+            <h3 id="characterTitle">Character</h3>
+          </div>
+          <span id="formatBadge" class="badge"></span>
+        </div>
+        <div id="summaryGrid" class="summary-grid"></div>
+      </section>
+
+      <section id="reviewResults" class="result-section" hidden>
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Starter Review</span>
+            <h3>Review Results</h3>
+          </div>
+          <button id="downloadReportButton" class="button secondary" type="button">Download Report</button>
+        </div>
+        <div class="notice">
+          <strong>Starter limitation:</strong>
+          this first website commit validates only data that can be safely derived from the current web adapter.
+          Full Foundry-module parity should be added by extracting the platform-neutral MMAid Core rather than duplicating rules.
+        </div>
+        <div id="findings"></div>
+      </section>
+    </section>
+
+    <section id="rules" class="panel">
+      <span class="eyebrow">Rules</span>
+      <h2>Rules Guide</h2>
+      <p>
+        The full searchable rule-card interface should be connected to the same
+        <code>rule-cards.json</code> data used by the Foundry module. The starter repo includes
+        the architecture for this but intentionally does not duplicate proprietary rulebook text.
+      </p>
+      <div class="rule-links">
+        <article class="mini-card"><h3>Action Economy</h3><p>Standard, move, free and reaction reference.</p></article>
+        <article class="mini-card"><h3>Power Level</h3><p>Attack/Effect and Defense pair checks.</p></article>
+        <article class="mini-card"><h3>Character Review</h3><p>Corrections, GM Review, Unknown and Passed results.</p></article>
+      </div>
+    </section>
+
+    <section id="privacy" class="panel">
+      <span class="eyebrow">Privacy</span>
+      <h2>Local-first by design</h2>
+      <p>
+        This starter parses files with browser JavaScript. It does not include an account system,
+        database, analytics service, external API call, or character-file upload endpoint.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>MMAid Web · CtrlAltDefeat · Starter architecture</p>
+  </footer>
+  <script>
+const ABILITY_NAMES = [
+  "strength", "stamina", "agility", "dexterity",
+  "fighting", "intellect", "awareness", "presence"
+];
+
+function detectMastermindMaker(data, filename = "") {
+  if (filename.toLowerCase().endsWith(".mm3")) return true;
+  return Boolean(
+    data &&
+    typeof data === "object" &&
+    Array.isArray(data.characters) &&
+    ("appVersion" in data || "edition" in data)
+  );
+}
+
+function activeCharacter(data) {
+  if (!Array.isArray(data.characters) || !data.characters.length) return null;
+  const active = data.characters.find(c => c.id === data.activeCharacterId);
+  return active ?? data.characters[0];
+}
+
+function normalizeAbilities(traits = {}) {
+  const source = traits.abilities ?? {};
+  return Object.fromEntries(
+    ABILITY_NAMES.map(name => [
+      name,
+      Number.isFinite(Number(source?.[name]?.rank)) ? Number(source[name].rank) : null
+    ])
+  );
+}
+
+function normalizeSkills(traits = {}) {
+  const abilities = normalizeAbilities(traits);
+  return Object.values(traits.skills ?? {})
+    .filter(skill => skill && skill.active !== false)
+    .map(skill => {
+      const baseAbility = Array.isArray(skill.baseAbilities) ? skill.baseAbilities[0] : null;
+      const abilityRank = baseAbility ? abilities[baseAbility] : null;
+      const ranks = Number.isFinite(Number(skill.rank)) ? Number(skill.rank) : 0;
+      const total = Number.isFinite(abilityRank) ? abilityRank + ranks : null;
+      return {
+        id: `${skill.uid ?? "skill"}:${skill.pid ?? ""}`,
+        name: skill.customTitle || skill.customText || skill.uid || "Skill",
+        uid: skill.uid ?? null,
+        ranks,
+        baseAbility,
+        total
+      };
+    });
+}
+
+function normalizeAdvantages(traits = {}) {
+  return Object.values(traits.advantages ?? {})
+    .filter(a => a && a.active !== false)
+    .map(a => ({
+      id: `${a.uid ?? "advantage"}:${a.pid ?? ""}`,
+      name: a.customTitle || a.uid || "Advantage",
+      uid: a.uid ?? null,
+      rank: Number.isFinite(Number(a.rank)) ? Number(a.rank) : 1,
+      option: a.customText || a.pid || null
+    }));
+}
+
+function flattenPowers(powerMap = {}, parent = null, out = []) {
+  for (const power of Object.values(powerMap ?? {})) {
+    if (!power || power.active === false) continue;
+
+    const node = {
+      id: power.pid ?? power.uid ?? crypto.randomUUID(),
+      name: power.title || power.customText || power.uid || "Power",
+      effect: power.uid ?? power.__class ?? "unknown",
+      rank: Number.isFinite(Number(power.rank)) ? Number(power.rank) : null,
+      className: power.__class ?? null,
+      parent,
+      raw: power
+    };
+    out.push(node);
+
+    if (power.powers && typeof power.powers === "object") {
+      flattenPowers(power.powers, node.id, out);
+    }
+  }
+  return out;
+}
+
+function parseMastermindMaker(data, filename = "") {
+  const wrapper = activeCharacter(data);
+  if (!wrapper) throw new Error("Mastermind Maker file contains no characters.");
+
+  const char = wrapper.charData ?? {};
+  const traits = char.traits ?? {};
+  const abilities = normalizeAbilities(traits);
+
+  const defensesPurchased = Object.fromEntries(
+    Object.entries(traits.defenses ?? {}).map(([name, defense]) => [
+      name,
+      Number.isFinite(Number(defense?.rank)) ? Number(defense.rank) : null
+    ])
+  );
+
+  return {
+    schema: "mmaid-web-character-v1",
+    source: {
+      formatId: "mastermind-maker-mm3",
+      formatLabel: "Mastermind Maker (.mm3)",
+      filename,
+      appVersion: data.appVersion ?? null,
+      edition: data.edition ?? null
+    },
+    identity: {
+      id: wrapper.id ?? null,
+      name: char.name || char.alias || wrapper.overrideName || data.saveName || "Unnamed Character",
+      heroName: char.alias || null,
+      type: char.type || null
+    },
+    powerLevel: Number(wrapper.finalPowerLevel ?? char.powerLevel ?? char.startingPowerLevel ?? 0) || null,
+    powerPoints: {
+      final: Number(wrapper.finalPowerPoints ?? 0) || null,
+      startingPowerLevel: Number(char.startingPowerLevel ?? 0) || null,
+      basePPPerPL: Number(char.basePP ?? 0) || null
+    },
+    abilities,
+    defenses: {
+      purchasedRanks: defensesPurchased,
+      note: "Mastermind Maker stores component/purchased defense data. Final totals can include Ability, Advantage and Power contributions, so full defense certification waits for the complete web adapter."
+    },
+    skills: normalizeSkills(traits),
+    advantages: normalizeAdvantages(traits),
+    powers: flattenPowers(traits.powers),
+    attacks: [],
+    complications: Object.values(traits.complications ?? {}).map(c => ({
+      name: c.customTitle || c.pid || "Complication",
+      text: c.customText || ""
+    })),
+    rawSummary: {
+      traitGroups: Object.keys(traits),
+      optionKeys: Object.keys(char.options ?? {})
+    }
+  };
+}
+
+
+function detectFoundryActor(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+  if (data.documentName === "Actor") return true;
+  return Boolean(
+    typeof data.name === "string" &&
+    typeof data.type === "string" &&
+    data.system &&
+    typeof data.system === "object" &&
+    Array.isArray(data.items)
+  );
+}
+
+function itemSummary(item) {
+  return {
+    id: item._id ?? null,
+    name: item.name ?? "Unnamed Item",
+    type: item.type ?? null,
+    system: item.system ?? {}
+  };
+}
+
+function parseFoundryActor(data, filename = "") {
+  const system = data.system ?? {};
+  const items = Array.isArray(data.items) ? data.items.map(itemSummary) : [];
+
+  const plCandidates = [
+    system.puissance,
+    system.powerLevel,
+    system.pl,
+    system?.niveau?.puissance
+  ];
+  const powerLevel = plCandidates.map(Number).find(Number.isFinite) ?? null;
+
+  return {
+    schema: "mmaid-web-character-v1",
+    source: {
+      formatId: "foundry-actor-json",
+      formatLabel: "Foundry Actor JSON",
+      filename
+    },
+    identity: {
+      id: data._id ?? null,
+      name: data.name ?? "Unnamed Foundry Actor",
+      heroName: null,
+      type: data.type ?? null
+    },
+    powerLevel,
+    powerPoints: {
+      starting: Number(system?.pp?.base ?? NaN),
+      earned: Number(system?.pp?.gain ?? NaN),
+      spent: Number(system?.pp?.used ?? NaN),
+      total: Number(system?.pp?.total ?? NaN)
+    },
+    abilities: {},
+    defenses: {},
+    skills: [],
+    advantages: items.filter(i => /advantage|avantage/i.test(i.type ?? "")),
+    powers: items.filter(i => /power|pouvoir/i.test(i.type ?? "")),
+    attacks: items.filter(i => /attack|attaque/i.test(i.type ?? "")),
+    complications: items.filter(i => /complication/i.test(i.type ?? "")),
+    rawSummary: {
+      itemCount: items.length,
+      itemTypes: [...new Set(items.map(i => i.type).filter(Boolean))]
+    },
+    _foundryRaw: data
+  };
+}
+
+
+function detectHeroLabXml(text, filename = "") {
+  if (filename.toLowerCase().endsWith(".xml") && /<\?xml|<document|<portfolio|<character/i.test(text)) return true;
+  return /<character[\s>]/i.test(text) && /hero\s*lab/i.test(text);
+}
+
+function textOf(root, selectors) {
+  for (const selector of selectors) {
+    const el = root.querySelector(selector);
+    const value = el?.getAttribute?.("name") || el?.getAttribute?.("value") || el?.textContent?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function parseHeroLabXml(text, filename = "") {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (doc.querySelector("parsererror")) throw new Error("The Hero Lab XML could not be parsed.");
+
+  const char = doc.querySelector("character") ?? doc.documentElement;
+  const name = char.getAttribute("name") || textOf(char, ["name", "charactername"]) || "Hero Lab Character";
+
+  const plText = textOf(char, [
+    "powerlevel",
+    "powerlevel value",
+    "[name='Power Level']"
+  ]);
+  const plMatch = String(plText ?? "").match(/-?\d+/);
+
+  return {
+    schema: "mmaid-web-character-v1",
+    source: {
+      formatId: "hero-lab-xml",
+      formatLabel: "Hero Lab XML",
+      filename
+    },
+    identity: { id: null, name, heroName: null, type: null },
+    powerLevel: plMatch ? Number(plMatch[0]) : null,
+    powerPoints: {},
+    abilities: {},
+    defenses: {},
+    skills: [],
+    advantages: [],
+    powers: [],
+    attacks: [],
+    complications: [],
+    rawSummary: {
+      rootElement: doc.documentElement.nodeName,
+      note: "Starter Hero Lab adapter only detects top-level identity/PL. Full Hero Lab field mapping should be added from real exported samples."
+    }
+  };
+}
+
+
+function parseGenericJson(data, filename = "") {
+  return {
+    schema: "mmaid-web-character-v1",
+    source: {
+      formatId: "generic-json",
+      formatLabel: "Generic JSON",
+      filename
+    },
+    identity: {
+      id: data?._id ?? data?.id ?? null,
+      name: data?.name ?? data?.characterName ?? "Unknown JSON Character",
+      heroName: data?.heroName ?? null,
+      type: data?.type ?? null
+    },
+    powerLevel: Number(data?.powerLevel ?? data?.pl ?? NaN) || null,
+    powerPoints: {},
+    abilities: data?.abilities ?? {},
+    defenses: data?.defenses ?? {},
+    skills: Array.isArray(data?.skills) ? data.skills : [],
+    advantages: Array.isArray(data?.advantages) ? data.advantages : [],
+    powers: Array.isArray(data?.powers) ? data.powers : [],
+    attacks: Array.isArray(data?.attacks) ? data.attacks : [],
+    complications: Array.isArray(data?.complications) ? data.complications : [],
+    rawSummary: {
+      topLevelKeys: Object.keys(data ?? {})
+    }
+  };
+}
+
+function parseTextStatblock(text, filename = "") {
+  const name = text.split(/\r?\n/).map(s => s.trim()).find(Boolean) || "Text Character";
+  const plMatch = text.match(/\bPL\s*[: ]\s*(\d+)\b/i);
+  return {
+    schema: "mmaid-web-character-v1",
+    source: { formatId: "text-statblock", formatLabel: "Text Statblock", filename },
+    identity: { id: null, name, heroName: null, type: null },
+    powerLevel: plMatch ? Number(plMatch[1]) : null,
+    powerPoints: {},
+    abilities: {},
+    defenses: {},
+    skills: [],
+    advantages: [],
+    powers: [],
+    attacks: [],
+    complications: [],
+    rawSummary: {
+      note: "Text import is intentionally conservative. It does not invent mechanical fields."
+    }
+  };
+}
+
+
+
+
+function extension(filename = "") {
+  const match = String(filename).toLowerCase().match(/\.[a-z0-9]+$/);
+  return match?.[0] ?? "";
+}
+
+export async function parseCharacterFile(file) {
+  const ext = extension(file.name);
+  const text = await file.text();
+
+  if (ext === ".mm3") {
+    const data = JSON.parse(text);
+    if (!detectMastermindMaker(data, file.name)) {
+      throw new Error("This .mm3 file does not match the Mastermind Maker structure MMAid recognizes.");
+    }
+    return parseMastermindMaker(data, file.name);
+  }
+
+  if (ext === ".xml") {
+    if (!detectHeroLabXml(text, file.name)) {
+      throw new Error("The XML file was parsed, but it was not recognized as a Hero Lab export.");
+    }
+    return parseHeroLabXml(text, file.name);
+  }
+
+  if (ext === ".html" || ext === ".htm") {
+    return parseTextStatblock(new DOMParser().parseFromString(text, "text/html").body?.innerText ?? text, file.name);
+  }
+
+  if (ext === ".txt") {
+    return parseTextStatblock(text, file.name);
+  }
+
+  if (ext === ".json" || text.trim().startsWith("{") || text.trim().startsWith("[")) {
+    const data = JSON.parse(text);
+
+    if (detectMastermindMaker(data, file.name)) return parseMastermindMaker(data, file.name);
+    if (detectFoundryActor(data)) return parseFoundryActor(data, file.name);
+
+    return parseGenericJson(data, file.name);
+  }
+
+  throw new Error("Unsupported file type.");
+}
+
+
+function finding(status, title, message, details = {}) {
+  return { status, title, message, ...details };
+}
+
+function numericEntries(obj = {}) {
+  return Object.entries(obj)
+    .filter(([, value]) => Number.isFinite(Number(value)))
+    .map(([key, value]) => [key, Number(value)]);
+}
+
+function combinedNegativeAbilityTotal(abilities = {}) {
+  return numericEntries(abilities)
+    .reduce((sum, [, value]) => sum + (value < 0 ? value : 0), 0);
+}
+
+function reviewNegativeAbilities(character) {
+  const entries = numericEntries(character.abilities);
+  if (!entries.length) {
+    return finding(
+      "unknown",
+      "Ability review not available",
+      "This adapter did not provide enough Ability data for the starter website to check negative Ability totals."
+    );
+  }
+
+  const negatives = entries.filter(([, value]) => value < 0);
+  const total = combinedNegativeAbilityTotal(character.abilities);
+
+  if (total < -2) {
+    return finding(
+      "correction",
+      "Combined negative Abilities exceed the adopted limit",
+      `The negative Ability total is ${total}. The adopted MMAid limit is -2 or better. Positive Ability values do not cancel remaining negatives.`,
+      { current: total, allowed: -2, names: negatives.map(([name, value]) => `${name} ${value}`) }
+    );
+  }
+
+  if (negatives.length) {
+    return finding(
+      "review",
+      "Negative Ability GM Review",
+      `The combined negative total is ${total}, which does not exceed the -2 hard limit. Individual negative Ability Scores still require the campaign's normal GM review.`,
+      { current: total, names: negatives.map(([name, value]) => `${name} ${value}`) }
+    );
+  }
+
+  return finding("pass", "Negative Ability check", "No negative Ability Scores were detected.");
+}
+
+function reviewPowerLevel(character) {
+  if (!Number.isFinite(Number(character.powerLevel))) {
+    return finding(
+      "unknown",
+      "Power Level not confirmed",
+      "MMAid Web could not confidently read a Power Level from this file. Do not invent one."
+    );
+  }
+  return finding("pass", "Power Level detected", `Power Level ${Number(character.powerLevel)} was read from the file.`);
+}
+
+function reviewFoundryParity(character) {
+  if (character.source?.formatId === "mastermind-maker-mm3") {
+    return finding(
+      "review",
+      "Mastermind Maker adapter is in preview mode",
+      "The .mm3 structure is readable, but final Defense totals and all Power/Attack calculations can include nested traits. Full MMAid validation should wait for the shared MMAid Core adapter rather than guessing."
+    );
+  }
+
+  if (character.source?.formatId === "foundry-actor-json") {
+    return finding(
+      "review",
+      "Foundry import detected",
+      "The Actor file was recognized. Full web parity should reuse the Foundry module's platform-neutral normalization and validators instead of duplicating them in this starter."
+    );
+  }
+
+  return finding(
+    "unknown",
+    "Full MMAid validation not connected yet",
+    "This starter can preview the import, but the complete platform-neutral validation engine has not been extracted into the website yet."
+  );
+}
+
+function reviewCharacter(character) {
+  return {
+    schema: "mmaid-web-report-v1",
+    generatedAt: new Date().toISOString(),
+    character: {
+      name: character.identity?.name ?? "Unnamed Character",
+      source: character.source,
+      powerLevel: character.powerLevel
+    },
+    findings: [
+      reviewPowerLevel(character),
+      reviewNegativeAbilities(character),
+      reviewFoundryParity(character)
+    ],
+    metrics: {
+      abilityCount: numericEntries(character.abilities).length,
+      skillCount: character.skills?.length ?? 0,
+      advantageCount: character.advantages?.length ?? 0,
+      powerCount: character.powers?.length ?? 0,
+      attackCount: character.attacks?.length ?? 0
+    }
+  };
+}
+
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderSummary(character, nodes) {
+  nodes.characterTitle.textContent = character.identity?.name || "Unnamed Character";
+  nodes.formatBadge.textContent = character.source?.formatLabel || "Unknown format";
+
+  const values = [
+    ["Power Level", character.powerLevel ?? "Unknown"],
+    ["Abilities", Object.values(character.abilities ?? {}).filter(v => Number.isFinite(Number(v))).length],
+    ["Skills", character.skills?.length ?? 0],
+    ["Advantages", character.advantages?.length ?? 0],
+    ["Powers", character.powers?.length ?? 0],
+    ["Attacks", character.attacks?.length ?? 0],
+    ["File", character.source?.filename ?? "—"],
+    ["Format", character.source?.formatId ?? "unknown"]
+  ];
+
+  nodes.summaryGrid.innerHTML = values.map(([label, value]) => `
+    <div class="summary-item">
+      <div class="label">${escapeHtml(label)}</div>
+      <div class="value">${escapeHtml(value)}</div>
+    </div>
+  `).join("");
+}
+
+function renderFindings(report, node) {
+  node.innerHTML = `
+    <div class="findings-list">
+      ${report.findings.map(f => `
+        <article class="finding ${escapeHtml(f.status)}">
+          <h4>${escapeHtml(f.title)}</h4>
+          <p>${escapeHtml(f.message)}</p>
+          ${Array.isArray(f.names) && f.names.length
+            ? `<p><strong>Detected:</strong> ${f.names.map(escapeHtml).join(", ")}</p>`
+            : ""}
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+
+
+const nodes = {
+  fileInput: document.querySelector("#fileInput"),
+  dropZone: document.querySelector("#dropZone"),
+  status: document.querySelector("#status"),
+  clearButton: document.querySelector("#clearButton"),
+  importSummary: document.querySelector("#importSummary"),
+  reviewResults: document.querySelector("#reviewResults"),
+  characterTitle: document.querySelector("#characterTitle"),
+  formatBadge: document.querySelector("#formatBadge"),
+  summaryGrid: document.querySelector("#summaryGrid"),
+  findings: document.querySelector("#findings"),
+  downloadReportButton: document.querySelector("#downloadReportButton")
+};
+
+let currentCharacter = null;
+let currentReport = null;
+
+function setStatus(message = "", kind = "ok") {
+  nodes.status.hidden = !message;
+  nodes.status.textContent = message;
+  nodes.status.className = `status ${kind}`;
+}
+
+function clearAll() {
+  currentCharacter = null;
+  currentReport = null;
+  nodes.fileInput.value = "";
+  nodes.importSummary.hidden = true;
+  nodes.reviewResults.hidden = true;
+  setStatus("");
+}
+
+async function processFile(file) {
+  if (!file) return;
+
+  try {
+    setStatus(`Reading ${file.name}...`, "ok");
+    const character = await parseCharacterFile(file);
+    const report = reviewCharacter(character);
+
+    currentCharacter = character;
+    currentReport = report;
+
+    renderSummary(character, nodes);
+    renderFindings(report, nodes.findings);
+
+    nodes.importSummary.hidden = false;
+    nodes.reviewResults.hidden = false;
+    setStatus(`${file.name} was parsed locally. No server upload was used.`, "ok");
+  } catch (error) {
+    console.error(error);
+    setStatus(error?.message || "The file could not be parsed.", "error");
+    nodes.importSummary.hidden = true;
+    nodes.reviewResults.hidden = true;
+  }
+}
+
+nodes.fileInput.addEventListener("change", event => {
+  processFile(event.target.files?.[0]);
+});
+
+for (const eventName of ["dragenter", "dragover"]) {
+  nodes.dropZone.addEventListener(eventName, event => {
+    event.preventDefault();
+    nodes.dropZone.classList.add("dragging");
+  });
+}
+
+for (const eventName of ["dragleave", "drop"]) {
+  nodes.dropZone.addEventListener(eventName, event => {
+    event.preventDefault();
+    nodes.dropZone.classList.remove("dragging");
+  });
+}
+
+nodes.dropZone.addEventListener("drop", event => {
+  processFile(event.dataTransfer?.files?.[0]);
+});
+
+nodes.dropZone.addEventListener("keydown", event => {
+  if (event.key === "Enter" || event.key === " ") nodes.fileInput.click();
+});
+
+nodes.clearButton.addEventListener("click", clearAll);
+
+nodes.downloadReportButton.addEventListener("click", () => {
+  if (!currentReport) return;
+  const safeName = String(currentCharacter?.identity?.name || "character")
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "") || "character";
+  const blob = new Blob([JSON.stringify(currentReport, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `mmaid-web-report-${safeName}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+  </script>
+</body>
+</html>
